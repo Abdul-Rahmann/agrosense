@@ -14,3 +14,18 @@ CREATE TABLE IF NOT EXISTS agrosense.weather (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT unique_weather_record UNIQUE (latitude, longitude, timestamp)
 );
+
+CREATE TABLE IF NOT EXISTS agrosense.soil (
+    id SERIAL PRIMARY KEY,
+    timestamp TIMESTAMP NOT NULL,
+    t_0_cm DECIMAL(5,2),
+    t_10_cm DECIMAL(5,2),
+    moisture DECIMAL(5,2),
+    ph_0_5cm DECIMAL(5,2),
+    ph_5_15cm DECIMAL(5,2),
+    ph_15_30cm DECIMAL(5,2),
+    ph_30_60cm DECIMAL(5,2),
+    ph_60_100cm DECIMAL(5,2),
+    ph_100_200cm DECIMAL(5,2),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
