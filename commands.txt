@@ -1,0 +1,3 @@
+docker-compose exec airflow-webserver bash
+
+cat /opt/airflow/simple_auth_manager_passwords.json.generated
