@@ -12,3 +12,62 @@ services:
       - "5433:5432"
     volumes:
       - ./sql:/docker-entrypoint-initdb.d/
+      - postgres_data:/var/lib/postgresql/data
+
+  airflow-init:
+    image: apache/airflow:3.1.0b1
+    depends_on:
+      - postgres
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://agrosense:agrosense@postgres/airflow_db
+      AIRFLOW__CORE__FERNET_KEY: 'something-random'
+      AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
+      AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+    user: "${AIRFLOW_UID:-50000}:0"
+    command: bash -c "airflow db migrate && airflow users create \
+                      --username admin \
+                      --password admin \
+                      --firstname Admin \
+                      --lastname User \
+                      --role Admin \
+                      --email admin@example.com"
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/logs:/opt/airflow/logs
+      - ./airflow/plugins:/opt/airflow/plugins
+
+  airflow-webserver:
+    image: apache/airflow:3.1.0b1
+    restart: always
+    depends_on:
+      - postgres
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://agrosense:agrosense@postgres/airflow_db
+      AIRFLOW__CORE__FERNET_KEY: 'something-random'
+    ports:
+      - "8080:8080"
+    command: standalone
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/logs:/opt/airflow/logs
+      - ./airflow/plugins:/opt/airflow/plugins
+
+  airflow-scheduler:
+    image: apache/airflow:3.1.0b1
+    restart: always
+    depends_on:
+      - postgres
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://agrosense:agrosense@postgres/airflow_db
+      AIRFLOW__CORE__FERNET_KEY: 'something-random'
+    command: scheduler
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/logs:/opt/airflow/logs
+      - ./airflow/plugins:/opt/airflow/plugins
+
+volumes:
+  postgres_data: {}
