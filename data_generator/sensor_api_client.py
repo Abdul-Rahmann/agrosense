@@ -1,17 +1,21 @@
 import os
+import sys
+import pathlib
 import requests
 import psycopg
 import datetime
 from dotenv import load_dotenv
-from mock_data import mock_soil_data, get_ph_profile
+
+sys.path.append(str(pathlib.Path(__file__).parent.parent.resolve()))
+
+from data_generator.mock_data import mock_soil_data, get_ph_profile
 
 load_dotenv()
 
-LON = -74.0060
-LAT = 47.7128
+BASE_URL = f"https://api.agromonitoring.com/agro/1.0/soil"
+LON = os.getenv('LON') or -74.0060
+LAT = os.getenv('LAT') or 47.7128
 API_KEY = os.getenv('SOIL_API_KEY')
-BASE_URL = f"https://api.agromonitoring.com/agro/1.0/soil?lat={LAT}&lon={LON}&appid={API_KEY}"
-CITY = "vancouver"
 DATABASE_CONFIG = {
     'dbname': os.getenv('DB_NAME'),
     'user': os.getenv('DB_USER'),
@@ -22,7 +26,8 @@ DATABASE_CONFIG = {
 
 def fetch_soil_data(lon, lat, key):
     try:
-        url = BASE_URL + f"&lat={lat}&lon={lon}&appid={key}"
+        url =  f"{BASE_URL}?lat={lat}&lon={lon}&appid={key}"
+        print("URL: ",url)
         response = requests.get(url)
         if response.status_code == 200:
             print("Data Fetched Successfully!")
@@ -75,5 +80,5 @@ def insert_sensor_data(data, DATABASE_CONFIG):
         print(f"An error occurred while inserting weather data: {e}")
 
 # api_response = mock_soil_data()
-api_response = fetch_soil_data(LON, LAT, API_KEY)
-insert_sensor_data(api_response, DATABASE_CONFIG)
+# api_response = fetch_soil_data(LON, LAT, API_KEY)
+# insert_sensor_data(api_response, DATABASE_CONFIG)

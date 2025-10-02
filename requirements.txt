@@ -1,4 +1,4 @@
 psycopg[binary]
 python-dotenv==1.0.1
-numpy==2.3.3
+numpy==1.24.3
 requests
