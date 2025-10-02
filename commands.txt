@@ -1,3 +1,31 @@
 docker-compose exec airflow-webserver bash
 
+docker-compose exec api-server bash
+
 cat /opt/airflow/simple_auth_manager_passwords.json.generated
+
+{"admin": "RF45QSkf2Uf6MydP"}
+
+docker exec -it airflow-scheduler bash
+
+ls /opt/airflow/agrosense
+
+ airflow command error: argument GROUP_OR_COMMAND: Command `airflow webserver` has been removed. Please use `airflow api-server`, see help above.
+
+
+ DOCKER COMMANDS
+ 1. docker volume ls # listing existing volumes
+ 2. docker volume inspect postgres_data # Inspecting volume data
+ 3. docker-compose logs
+ 4. docker volume prune
+ 5. docker volume rm <volume_name>  eg. docker volume rm agrosense_airflow_postgres_data
+ 6. docker-compose exec airflow-apiserver bash # latest command
+ 7. docker-compose up airflow-scheduler
+ 8. docker-compose logs airflow-scheduler
+ 9. docker-compose exec airflow-scheduler airflow dags list --reload
+ 10. lsof -i :5432
+ 11. docker rm $(docker ps -aq)
+ 12. docker system prune -a --volumes
+
+
+
