@@ -1,15 +1,21 @@
 # API docs - https://www.visualcrossing.com/resources/documentation/weather-api/timeline-weather-api/
 import os
+import sys
+import pathlib
 import requests
 import psycopg
 import datetime
 from dotenv import load_dotenv
-from mock_data import mock_weather_data
+
+sys.path.append(str(pathlib.Path(__file__).parent.parent.resolve()))
+
+from data_generator.mock_data import mock_weather_data
 
 load_dotenv()
 
-CITY = "vancouver"
 BASE_URL = r"https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/"
+LAT = os.getenv('LAT') or 47.7128
+LON = os.getenv('LON') or -74.0060
 API_KEY = os.getenv('WEATHER_API_KEY')
 DATABASE_CONFIG = {
     'dbname': os.getenv('DB_NAME'),
@@ -19,9 +25,9 @@ DATABASE_CONFIG = {
     'port': os.getenv('DB_PORT')
 }
 
-def weather_data(city_name,key):
+def fetch_weather_data(lon,lat,key):
     try:
-        url = BASE_URL + f"{city_name}?key={key}"
+        url = f"{BASE_URL}{lat},{lon}?key={key}"
         print(url)
         response = requests.get(url)
         response.raise_for_status()
@@ -32,9 +38,6 @@ def weather_data(city_name,key):
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
         raise
-
-# print(weather_data(CITY,API_KEY))
-api_response = mock_weather_data()
 
 def insert_weather_data(data, DATABASE_CONFIG):
     try:
@@ -76,4 +79,6 @@ def insert_weather_data(data, DATABASE_CONFIG):
     except psycopg.Error as e:
         print(f"An error occurred while inserting weather data: {e}")
 
-insert_weather_data(api_response, DATABASE_CONFIG)
+# api_response = fetch_weather_data(LAT,LON,API_KEY)
+# api_response = mock_weather_data()
+# insert_weather_data(api_response, DATABASE_CONFIG)
