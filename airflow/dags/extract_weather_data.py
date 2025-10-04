@@ -8,14 +8,14 @@ from data_generator.weather_api_client import fetch_weather_data, insert_weather
 
 LAT = os.getenv('LAT') or 47.7128
 LON = os.getenv('LON') or -74.0060
-API_KEY = os.getenv('WEATHER_API_KEY')
 DATABASE_CONFIG = {
-    'dbname': os.getenv('DB_NAME'),
-    'user': os.getenv('DB_USER'),
-    'password': os.getenv('DB_PASSWORD'),
-    'host': os.getenv('DB_HOST'),
-    'port': os.getenv('DB_PORT')
+    'dbname': os.getenv('POSTGRES_DB'),
+    'user': os.getenv('POSTGRES_USER'),
+    'password': os.getenv('POSTGRES_PASSWORD'),
+    'host': os.getenv('POSTGRES_HOST'),
+    'port': os.getenv('POSTGRES_PORT')
 }
+API_KEY = os.getenv('WEATHER_API_KEY')
 
 default_args = {
     'owner': 'sam',
