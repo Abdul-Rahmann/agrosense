@@ -6,16 +6,16 @@ from datetime import datetime, timedelta
 
 from data_generator.sensor_api_client import fetch_soil_data, insert_sensor_data
 
-LON = -74.0060
-LAT = 47.7128
-API_KEY = os.getenv('SOIL_API_KEY')
+LON = os.getenv('LON') or -74.0060
+LAT = os.getenv('LAT') or 47.7128
 DATABASE_CONFIG = {
-    'dbname': os.getenv('DB_NAME'),
-    'user': os.getenv('DB_USER'),
-    'password': os.getenv('DB_PASSWORD'),
-    'host': os.getenv('DB_HOST'),
-    'port': os.getenv('DB_PORT')
+    'dbname': os.getenv('POSTGRES_DB'),
+    'user': os.getenv('POSTGRES_USER'),
+    'password': os.getenv('POSTGRES_PASSWORD'),
+    'host': os.getenv('POSTGRES_HOST'),
+    'port': os.getenv('POSTGRES_PORT')
 }
+API_KEY = os.getenv('SOIL_API_KEY')
 
 default_args = {
     'owner': 'sam',
