@@ -105,5 +105,19 @@ services:
     volumes:
       - ./:/sources
 
+  dbt:
+    image: ghcr.io/dbt-labs/dbt-snowflake:1.8.1
+    platform: linux/amd64
+    container_name: agrosense_dbt
+    depends_on:
+      - postgres
+    environment:
+      DBT_PROFILES_DIR: /root/.dbt
+    volumes:
+      - ./agrosense_dbt:/usr/app
+      - ~/.dbt:/root/.dbt
+    command: run
+    tty: true
+
 volumes:
   postgres_data: {}
