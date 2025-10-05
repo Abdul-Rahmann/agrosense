@@ -27,5 +27,19 @@ ls /opt/airflow/agrosense
  11. docker rm $(docker ps -aq)
  12. docker system prune -a --volumes
 
+ DBT Commands
+ 1. docker-compose up -d --build
+ 2. docker-compose exec <service-name> dbt run, docker-compose exec dbt dbt run
+ 3. run, test, debug, seed, list,
+ 4. docker compose run --rm dbt debug # Testing dbt setup before running models OR docker-compose run dbt debug
+ 5. docker compose run --rm dbt ls # list models
+ 6. docker-compose run dbt test
+ 7. docker-compose up dbt
+ 8. docker-compose stop dbt
+ 9. docker-compose run dbt bash
+
+
+
+
 
 

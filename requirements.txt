@@ -2,3 +2,4 @@ psycopg[binary]
 python-dotenv==1.0.1
 numpy==1.24.3
 requests
+dbt-snowflake==1.10.2
