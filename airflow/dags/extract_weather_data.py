@@ -36,7 +36,7 @@ with DAG(
 
     def fetch_weather_data_task(**context):
         fetched_data = fetch_weather_data(LON, LAT, API_KEY)
-        context['ti'].xcom_push(key='sensor_data', value=fetched_data)
+        context['ti'].xcom_push(key='weather_data', value=fetched_data)
 
     fetch_data_task = PythonOperator(
         task_id='fetch_weather_data',
@@ -45,9 +45,7 @@ with DAG(
     )
 
     def insert_weather_data_task(**context):
-        fetched_data = context['ti'].xcom_pull(key='sensor_data', task_ids='fetch_sensor_data')
-        print("FETCHED DATA:")
-        print(fetched_data)
+        fetched_data = context['ti'].xcom_pull(key='weather_data', task_ids='fetch_weather_data')
         insert_weather_data(fetched_data, DATABASE_CONFIG)
 
     insert_data_task = PythonOperator(

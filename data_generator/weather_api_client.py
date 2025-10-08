@@ -23,11 +23,12 @@ DATABASE_CONFIG = {
     'host': os.getenv('POSTGRES_HOST'),
     'port': os.getenv('POSTGRES_PORT')
 }
-API_KEY = os.getenv('SOIL_API_KEY')
+API_KEY = os.getenv('WEATHER_API_KEY')
 
 def fetch_weather_data(lon,lat,key):
     try:
-        url = f"{BASE_URL}{lat},{lon}?key={key}"
+        today = datetime.datetime.now().strftime('%Y-%m-%d')
+        url = f"{BASE_URL}{lat},{lon}/{today}?key={key}"
         print(url)
         response = requests.get(url)
         response.raise_for_status()
