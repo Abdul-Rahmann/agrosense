@@ -1,0 +1,11 @@
+version: 2
+
+sources:
+  - name: agrosense_source
+    database: agrosense_db
+    schema: agrosense_sch
+    tables:
+      - name: weather
+        description: "Historical weather data such as temperature, rainfall, etc."
+      - name: soil
+        description: "Soil data, including pH, moisture levels, and nutrient content."
