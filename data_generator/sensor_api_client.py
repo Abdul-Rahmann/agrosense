@@ -1,9 +1,5 @@
-import os
-import sys
-import pathlib
-import requests
-import psycopg
-import datetime
+import os, sys, pathlib, requests, psycopg
+from datetime import datetime, timezone
 from dotenv import load_dotenv
 
 sys.path.append(str(pathlib.Path(__file__).parent.parent.resolve()))
@@ -61,7 +57,7 @@ def insert_sensor_data(data, DATABASE_CONFIG):
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
                 """
                 row = (
-                    datetime.datetime.fromtimestamp(data['dt']).strftime('%Y-%m-%d %H:%M:%S'),
+                    datetime.fromtimestamp(data['dt'], tz=timezone.utc),
                     data['t0'],
                     data['t10'],
                     data['moisture'],
