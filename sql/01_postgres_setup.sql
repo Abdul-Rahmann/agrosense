@@ -2,6 +2,8 @@ CREATE SCHEMA IF NOT EXISTS agrosense AUTHORIZATION agrosense;
 
 ALTER ROLE agrosense SET search_path TO agrosense, public;
 
+SET timezone = 'UTC';
+
 CREATE TABLE IF NOT EXISTS agrosense.weather (
     id SERIAL PRIMARY KEY,
     latitude DECIMAL(8,5) NOT NULL,

@@ -1,10 +1,6 @@
 # API docs - https://www.visualcrossing.com/resources/documentation/weather-api/timeline-weather-api/
-import os
-import sys
-import pathlib
-import requests
-import psycopg
-import datetime
+import os, sys, pathlib, requests, psycopg
+from datetime import datetime, timezone
 from dotenv import load_dotenv
 
 sys.path.append(str(pathlib.Path(__file__).parent.parent.resolve()))
@@ -27,7 +23,7 @@ API_KEY = os.getenv('WEATHER_API_KEY')
 
 def fetch_weather_data(lon,lat,key):
     try:
-        today = datetime.datetime.now().strftime('%Y-%m-%d')
+        today = datetime.now().strftime('%Y-%m-%d')
         url = f"{BASE_URL}{lat},{lon}/{today}?key={key}"
         print(url)
         response = requests.get(url)
@@ -64,7 +60,7 @@ def insert_weather_data(data, DATABASE_CONFIG):
                     (
                         latitude,
                         longitude,
-                        datetime.datetime.fromtimestamp(hour['datetimeEpoch']).strftime('%Y-%m-%d %H:%M:%S'),
+                        datetime.fromtimestamp(hour['datetimeEpoch'], timezone.utc),
                         (hour.get('temp') - 32) * 5.0 / 9.0 if hour.get('temp') is not None else None,  # Fahrenheit → Celsius
                         hour.get('humidity'),
                         hour.get('solarradiation'),
