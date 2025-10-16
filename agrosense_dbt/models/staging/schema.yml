@@ -1,0 +1,118 @@
+version: 2
+
+models:
+  - name: stg_weather
+    description: "Staging model for weather data"
+    columns:
+      - name: id
+        description: "Primary key for weather readings"
+        data_type: number
+        tests:
+          - unique
+          - not_null
+
+      - name: latitude
+        description: "Latitude coordinate"
+        data_type: number
+        tests:
+          - not_null
+
+      - name: longitude
+        description: "Longitude coordinate"
+        data_type: number
+        tests:
+          - not_null
+
+      - name: timestamp
+        description: "Timestamp when weather data was recorded"
+        data_type: timestamp_ntz
+        tests:
+          - not_null
+
+      - name: temperature
+        description: "Temperature in Celsius"
+        data_type: number
+
+      - name: humidity
+        description: "Humidity percentage"
+        data_type: number
+
+      - name: solar_radiation
+        description: "Solar radiation measurement"
+        data_type: number
+
+      - name: pressure
+        description: "Atmospheric pressure"
+        data_type: number
+
+      - name: created_at
+        description: "Timestamp when record was created in database"
+        data_type: timestamp_ntz
+        tests:
+          - not_null
+
+  - name: stg_soil
+    description: "Staging model for soil sensor data"
+    columns:
+      - name: id
+        description: "Primary key for soil readings"
+        data_type: number
+        tests:
+          - unique
+          - not_null
+
+      - name: timestamp
+        description: "Timestamp when soil data was recorded"
+        data_type: timestamp_ntz
+        tests:
+          - not_null
+
+      - name: t_0_cm
+        description: "Temperature at 0cm depth in Celsius"
+        data_type: number
+        tests:
+          - not_null
+
+      - name: t_10_cm
+        description: "Temperature at 10cm depth in Celsius"
+        data_type: number
+        tests:
+          - not_null
+
+      - name: moisture
+        description: "Soil moisture content"
+        data_type: number
+        tests:
+          - not_null
+
+      - name: ph_0_5cm
+        description: "pH level at 0-5cm depth"
+        data_type: number
+        tests:
+          - not_null
+
+      - name: ph_5_15cm
+        description: "pH level at 5-15cm depth"
+        data_type: number
+
+      - name: ph_15_30cm
+        description: "pH level at 15-30cm depth"
+        data_type: number
+
+      - name: ph_30_60cm
+        description: "pH level at 30-60cm depth"
+        data_type: number
+
+      - name: ph_60_100cm
+        description: "pH level at 60-100cm depth"
+        data_type: number
+
+      - name: ph_100_200cm
+        description: "pH level at 100-200cm depth"
+        data_type: number
+
+      - name: created_at
+        description: "Timestamp when record was created in database"
+        data_type: timestamp_ntz
+        tests:
+          - not_null
