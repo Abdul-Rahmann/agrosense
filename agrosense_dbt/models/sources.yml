@@ -9,3 +9,5 @@ sources:
         description: "Historical weather data such as temperature, rainfall, etc."
       - name: soil
         description: "Soil data, including pH, moisture levels, and nutrient content."
+      - name: crop_yield
+        description: "Seeded Kaggle dataset containing crop yield, rainfall, temperature, and pesticide use."
