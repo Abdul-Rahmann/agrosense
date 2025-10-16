@@ -1,7 +1,7 @@
 version: 2
 
 sources:
-  - name: agrosense_source
+  - name: agrosense_snowflake
     database: agrosense_db
     schema: agrosense_sch
     tables:

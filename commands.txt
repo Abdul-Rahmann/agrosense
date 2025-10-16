@@ -38,6 +38,10 @@ ls /opt/airflow/agrosense
  8. docker-compose stop dbt
  9. docker-compose run dbt bash
 
+DOCKER-DBT COMMANDS
+ 10.dc run --rm dbt run
+ 11.dc run --rm dbt test
+
 
 
 
