@@ -86,29 +86,29 @@ models:
           - not_null
 
       - name: ph_0_5cm
-        description: "pH level at 0-5cm depth"
+        description: "pH level at 0–5cm depth"
         data_type: number
         tests:
           - not_null
 
       - name: ph_5_15cm
-        description: "pH level at 5-15cm depth"
+        description: "pH level at 5–15cm depth"
         data_type: number
 
       - name: ph_15_30cm
-        description: "pH level at 15-30cm depth"
+        description: "pH level at 15–30cm depth"
         data_type: number
 
       - name: ph_30_60cm
-        description: "pH level at 30-60cm depth"
+        description: "pH level at 30–60cm depth"
         data_type: number
 
       - name: ph_60_100cm
-        description: "pH level at 60-100cm depth"
+        description: "pH level at 60–100cm depth"
         data_type: number
 
       - name: ph_100_200cm
-        description: "pH level at 100-200cm depth"
+        description: "pH level at 100–200cm depth"
         data_type: number
 
       - name: created_at
@@ -116,3 +116,44 @@ models:
         data_type: timestamp_ntz
         tests:
           - not_null
+
+  - name: stg_crop_yield
+    description: "Cleaned crop yield dataset from Kaggle"
+    columns:
+      - name: area
+        description: "Country or region name"
+        data_type: varchar
+        tests:
+          - not_null
+
+      - name: item
+        description: "Crop type"
+        data_type: varchar
+        tests:
+          - not_null
+
+      - name: year
+        description: "Year of observation"
+        data_type: number
+        tests:
+          - not_null
+
+      - name: hg_ha_yield
+        description: "Yield (hectograms per hectare)"
+        data_type: number
+        tests:
+          - not_null
+
+      - name: average_rainfall_mm_per_year
+        description: "Average annual rainfall (mm)"
+        data_type: number
+        tests:
+          - not_null
+
+      - name: pesticides_tonnes
+        description: "Total pesticide use (tonnes)"
+        data_type: number
+
+      - name: avg_temp
+        description: "Average temperature (°C)"
+        data_type: number

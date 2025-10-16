@@ -38,3 +38,14 @@ models:
       +materialized: view
     staging:
       +materialized: table
+
+seeds:
+  agrosense_dbt:
+    +column_types:
+      Area: string
+      Item: string
+      Year: integer
+      hg/ha_yield: float
+      average_rain_fall_mm_per_year: float
+      pesticides_tonnes: float
+      avg_temp: float
