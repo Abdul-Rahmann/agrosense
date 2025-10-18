@@ -5,14 +5,14 @@ with source as (
 final as (
     select
         "id" as id,
-        "latitude" as latitude,
-        "longitude" as longitude,
-        "timestamp" as timestamp,
-        "temperature" as temperature,
-        "humidity" as humidity,
-        "solar_radiation" as solar_radiation,
-        "pressure" as pressure,
-        "created_at" as created_at
+        "latitude"::float as latitude,
+        "longitude"::float as longitude,
+        "timestamp"::timestamp as timestamp,
+        "temperature"::float as temperature,
+        "humidity"::float as humidity,
+        "solar_radiation"::float as solar_radiation,
+        "pressure"::float as pressure,
+        "created_at"::timestamp as created_at
     from source
 )
 
