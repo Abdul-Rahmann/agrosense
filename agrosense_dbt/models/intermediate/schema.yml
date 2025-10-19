@@ -1,0 +1,189 @@
+version: 2
+
+models:
+  - name: int_sensor_readings_unified
+    description: "Unified sensor data combining weather and soil readings by timestamp. Only includes rows where both weather AND soil data exist (inner join)."
+#    tests:
+#      - dbt_utils.equal_rowcount:
+#          compare_model: ref('int_daily_conditions')
+#          config:
+#            severity: warn
+    columns:
+      - name: reading_timestamp
+        description: "Rounded timestamp (to nearest minute) when both sensors recorded data"
+        data_type: timestamp_ntz
+        tests:
+          - not_null
+#          - unique
+
+      - name: latitude
+        description: "Latitude coordinate from weather sensor"
+        data_type: number
+        tests:
+          - not_null
+
+      - name: longitude
+        description: "Longitude coordinate from weather sensor"
+        data_type: number
+        tests:
+          - not_null
+
+      - name: air_temp
+        description: "Air temperature in Celsius"
+        data_type: number
+        tests:
+          - not_null
+
+      - name: humidity
+        description: "Relative humidity percentage"
+        data_type: number
+        tests:
+          - not_null
+
+      - name: solar_radiation
+        description: "Solar radiation in W/m²"
+        data_type: number
+
+      - name: pressure
+        description: "Atmospheric pressure in hPa"
+        data_type: number
+
+      - name: soil_temp_surface
+        description: "Soil temperature at surface (0cm) in Celsius"
+        data_type: number
+        tests:
+          - not_null
+
+      - name: soil_temp_10cm
+        description: "Soil temperature at 10cm depth in Celsius"
+        data_type: number
+        tests:
+          - not_null
+
+      - name: soil_moisture
+        description: "Soil moisture content percentage"
+        data_type: number
+        tests:
+          - not_null
+
+      - name: ph_surface
+        description: "Soil pH at surface (0-5cm depth)"
+        data_type: number
+        tests:
+          - not_null
+
+  - name: int_daily_conditions
+    description: "Daily aggregated environmental conditions from unified sensor readings. One row per day with min/max/avg statistics."
+#    tests:
+#      - dbt_utils.recency:
+#          datepart: day
+#          field: date
+#          interval: 7
+#          config:
+#            severity: warn
+    columns:
+      - name: date
+        description: "Date of readings"
+        data_type: date
+        tests:
+          - not_null
+          - unique
+
+      - name: avg_daily_temp
+        description: "Average air temperature for the day (Celsius)"
+        data_type: number
+        tests:
+          - not_null
+
+      - name: min_daily_temp
+        description: "Minimum air temperature for the day (Celsius)"
+        data_type: number
+        tests:
+          - not_null
+
+      - name: max_daily_temp
+        description: "Maximum air temperature for the day (Celsius)"
+        data_type: number
+        tests:
+          - not_null
+
+      - name: avg_humidity
+        description: "Average relative humidity for the day (%)"
+        data_type: number
+
+      - name: avg_soil_moisture
+        description: "Average soil moisture for the day (%)"
+        data_type: number
+
+      - name: avg_ph
+        description: "Average soil pH for the day"
+        data_type: number
+
+      - name: total_solar_radiation
+        description: "Total solar radiation for the day (W/m²)"
+        data_type: number
+
+      - name: reading_count
+        description: "Number of sensor readings collected during the day"
+        data_type: number
+        tests:
+          - not_null
+
+  - name: int_crop_yield_features
+    description: "Historical crop yield data enriched with derived features for ML training"
+#    tests:
+#      - dbt_utils.equal_rowcount:
+#          compare_model: source('agrosense_snowflake', 'crop_yield')
+    columns:
+      - name: area
+        description: "Country or region name"
+        data_type: varchar
+        tests:
+          - not_null
+
+      - name: item
+        description: "Crop type"
+        data_type: varchar
+        tests:
+          - not_null
+
+      - name: year
+        description: "Year of observation"
+        data_type: number
+        tests:
+          - not_null
+
+      - name: hg_ha_yield
+        description: "Crop yield in hectograms per hectare"
+        data_type: number
+        tests:
+          - not_null
+
+      - name: average_rainfall_mm_per_year
+        description: "Average annual rainfall (mm)"
+        data_type: number
+        tests:
+          - not_null
+
+      - name: pesticides_tonnes
+        description: "Total pesticide use (tonnes)"
+        data_type: number
+
+      - name: avg_temp
+        description: "Average temperature (°C)"
+        data_type: number
+
+      - name: yield_per_mm_rain
+        description: "Calculated: yield divided by rainfall (water efficiency metric)"
+        data_type: number
+
+      - name: pesticides_per_yield_unit
+        description: "Calculated: pesticide intensity per unit of yield"
+        data_type: number
+
+      - name: temp_category
+        description: "Temperature classification: cold (<15°C), optimal (15-25°C), hot (>25°C)"
+        data_type: varchar
+        tests:
+          - accepted_values:
+              values: ['cold', 'optimal', 'hot']

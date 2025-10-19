@@ -1,0 +1,78 @@
+version: 2
+
+models:
+  - name: rpt_daily_farm_summary
+    description: "Daily executive summary for dashboard home screen. Shows key metrics and day-over-day changes."
+    columns:
+      - name: date
+        description: "Date of summary"
+        data_type: date
+        tests:
+          - unique
+          - not_null
+
+      - name: avg_daily_temp
+        description: "Average air temperature for the day (°C)"
+        data_type: number
+
+      - name: avg_humidity
+        description: "Average relative humidity for the day (%)"
+        data_type: number
+
+      - name: avg_soil_moisture
+        description: "Average soil moisture for the day (%)"
+        data_type: number
+
+      - name: avg_ph
+        description: "Average soil pH for the day"
+        data_type: number
+
+      - name: reading_count
+        description: "Number of sensor readings collected"
+        data_type: number
+        tests:
+          - not_null
+
+      - name: temp_change_24h
+        description: "Change in temperature vs previous day (°C)"
+        data_type: number
+
+      - name: sensor_status
+        description: "Data quality status: 'HEALTHY' (>=20 readings) or 'WARNING' (<20 readings)"
+        data_type: varchar
+        tests:
+          - accepted_values:
+              values: ['HEALTHY', 'WARNING']
+
+  - name: rpt_irrigation_recommendations
+    description: "Smart irrigation recommendations based on current soil moisture and temperature. Powers automated irrigation decisions."
+    columns:
+      - name: recommendation_date
+        description: "Date of recommendation"
+        data_type: date
+        tests:
+          - not_null
+
+      - name: current_moisture
+        description: "Current average soil moisture (%)"
+        data_type: number
+        tests:
+          - not_null
+
+      - name: current_temp
+        description: "Current average air temperature (°C)"
+        data_type: number
+
+      - name: recommendation
+        description: "Action to take: IRRIGATE_NOW, IRRIGATE_SOON, SKIP_IRRIGATION, or MONITOR"
+        data_type: varchar
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['IRRIGATE_NOW', 'IRRIGATE_SOON', 'SKIP_IRRIGATION', 'MONITOR']
+
+      - name: estimated_water_mm
+        description: "Estimated water needed in millimeters (0 if no irrigation needed)"
+        data_type: number
+        tests:
+          - not_null

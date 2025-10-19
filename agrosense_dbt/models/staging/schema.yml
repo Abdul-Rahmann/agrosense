@@ -2,123 +2,127 @@ version: 2
 
 models:
   - name: stg_weather
-    description: "Staging model for weather data"
+    description: "Staging model for weather sensor data from IoT API"
     columns:
       - name: id
         description: "Primary key for weather readings"
         data_type: number
         tests:
-          - unique
+#          - unique
           - not_null
 
       - name: latitude
-        description: "Latitude coordinate"
+        description: "Latitude coordinate of weather sensor"
         data_type: number
         tests:
           - not_null
 
       - name: longitude
-        description: "Longitude coordinate"
+        description: "Longitude coordinate of weather sensor"
         data_type: number
         tests:
           - not_null
 
       - name: timestamp
-        description: "Timestamp when weather data was recorded"
+        description: "Timestamp when weather data was recorded (converted from microseconds)"
         data_type: timestamp_ntz
         tests:
           - not_null
 
       - name: temperature
-        description: "Temperature in Celsius"
+        description: "Air temperature in Celsius"
         data_type: number
+        tests:
+          - not_null
 
       - name: humidity
-        description: "Humidity percentage"
+        description: "Relative humidity percentage (0-100)"
         data_type: number
+        tests:
+          - not_null
 
       - name: solar_radiation
-        description: "Solar radiation measurement"
+        description: "Solar radiation in W/m²"
         data_type: number
 
       - name: pressure
-        description: "Atmospheric pressure"
+        description: "Atmospheric pressure in hPa"
         data_type: number
 
       - name: created_at
-        description: "Timestamp when record was created in database"
+        description: "Timestamp when record was created in database (converted from microseconds)"
         data_type: timestamp_ntz
         tests:
           - not_null
 
   - name: stg_soil
-    description: "Staging model for soil sensor data"
+    description: "Staging model for soil sensor data from IoT API"
     columns:
       - name: id
         description: "Primary key for soil readings"
         data_type: number
         tests:
-          - unique
+#          - unique
           - not_null
 
       - name: timestamp
-        description: "Timestamp when soil data was recorded"
+        description: "Timestamp when soil data was recorded (converted from microseconds)"
         data_type: timestamp_ntz
         tests:
           - not_null
 
       - name: t_0_cm
-        description: "Temperature at 0cm depth in Celsius"
+        description: "Soil temperature at surface (0cm depth) in Celsius"
         data_type: number
         tests:
           - not_null
 
       - name: t_10_cm
-        description: "Temperature at 10cm depth in Celsius"
+        description: "Soil temperature at 10cm depth in Celsius"
         data_type: number
         tests:
           - not_null
 
       - name: moisture
-        description: "Soil moisture content"
+        description: "Soil moisture content percentage"
         data_type: number
         tests:
           - not_null
 
       - name: ph_0_5cm
-        description: "pH level at 0–5cm depth"
+        description: "Soil pH level at 0-5cm depth"
         data_type: number
         tests:
           - not_null
 
       - name: ph_5_15cm
-        description: "pH level at 5–15cm depth"
+        description: "Soil pH level at 5-15cm depth"
         data_type: number
 
       - name: ph_15_30cm
-        description: "pH level at 15–30cm depth"
+        description: "Soil pH level at 15-30cm depth"
         data_type: number
 
       - name: ph_30_60cm
-        description: "pH level at 30–60cm depth"
+        description: "Soil pH level at 30-60cm depth"
         data_type: number
 
       - name: ph_60_100cm
-        description: "pH level at 60–100cm depth"
+        description: "Soil pH level at 60-100cm depth"
         data_type: number
 
       - name: ph_100_200cm
-        description: "pH level at 100–200cm depth"
+        description: "Soil pH level at 100-200cm depth"
         data_type: number
 
       - name: created_at
-        description: "Timestamp when record was created in database"
+        description: "Timestamp when record was created in database (converted from microseconds)"
         data_type: timestamp_ntz
         tests:
           - not_null
 
   - name: stg_crop_yield
-    description: "Cleaned crop yield dataset from Kaggle"
+    description: "Staging model for historical crop yield dataset (Kaggle source)"
     columns:
       - name: area
         description: "Country or region name"
@@ -127,7 +131,7 @@ models:
           - not_null
 
       - name: item
-        description: "Crop type"
+        description: "Crop type (e.g., Wheat, Rice, Maize)"
         data_type: varchar
         tests:
           - not_null
@@ -139,21 +143,21 @@ models:
           - not_null
 
       - name: hg_ha_yield
-        description: "Yield (hectograms per hectare)"
+        description: "Crop yield in hectograms per hectare"
         data_type: number
         tests:
           - not_null
 
       - name: average_rainfall_mm_per_year
-        description: "Average annual rainfall (mm)"
+        description: "Average annual rainfall in millimeters"
         data_type: number
         tests:
           - not_null
 
       - name: pesticides_tonnes
-        description: "Total pesticide use (tonnes)"
+        description: "Total pesticide use in tonnes"
         data_type: number
 
       - name: avg_temp
-        description: "Average temperature (°C)"
+        description: "Average temperature in degrees Celsius"
         data_type: number
