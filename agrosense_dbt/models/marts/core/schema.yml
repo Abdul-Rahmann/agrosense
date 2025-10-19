@@ -1,0 +1,236 @@
+version: 2
+
+models:
+  - name: fct_ml_training_dataset
+    description: "Complete ML training dataset with all features and target variable. Used to train crop yield prediction models."
+    # tests:
+    #   - dbt_utils.expression_is_true:
+    #       expression: "target_yield > 0"
+    #       config:
+    #         severity: warn
+    columns:
+      - name: target_yield
+        description: "TARGET VARIABLE: Crop yield in hectograms per hectare"
+        data_type: number
+        tests:
+          - not_null
+
+      - name: area
+        description: "FEATURE: Country or region name"
+        data_type: varchar
+        tests:
+          - not_null
+
+      - name: crop_type
+        description: "FEATURE: Type of crop (wheat, rice, maize, etc.)"
+        data_type: varchar
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_crop_benchmarks')
+              field: crop_type
+              config:
+                severity: warn
+
+      - name: year
+        description: "FEATURE: Year of observation"
+        data_type: number
+        tests:
+          - not_null
+
+      - name: average_rainfall_mm_per_year
+        description: "FEATURE: Average annual rainfall (mm)"
+        data_type: number
+        tests:
+          - not_null
+
+      - name: pesticides_tonnes
+        description: "FEATURE: Total pesticide use (tonnes)"
+        data_type: number
+
+      - name: avg_temp
+        description: "FEATURE: Average temperature (°C)"
+        data_type: number
+
+      - name: yield_efficiency
+        description: "DERIVED FEATURE: Yield per mm of rainfall (water use efficiency)"
+        data_type: number
+
+      - name: pesticide_intensity
+        description: "DERIVED FEATURE: Pesticide use per mm of rainfall"
+        data_type: number
+
+      - name: year_in_decade
+        description: "DERIVED FEATURE: Year modulo 10 (cyclical pattern)"
+        data_type: number
+
+      - name: era
+        description: "DERIVED FEATURE: 'modern' (>=2010) or 'historical' (<2010)"
+        data_type: varchar
+        tests:
+          - accepted_values:
+              values: ['modern', 'historical']
+
+  - name: fct_current_conditions
+    description: "Real-time environmental conditions from last 24 hours, formatted for ML model inference. Refreshed hourly for live predictions."
+#    tests:
+#      - dbt_utils.recency:
+#          datepart: hour
+#          field: prediction_timestamp
+#          interval: 2
+#          config:
+#            severity: warn
+    columns:
+      - name: prediction_timestamp
+        description: "Timestamp when this prediction snapshot was created"
+        data_type: timestamp_ntz
+        tests:
+          - not_null
+
+      - name: avg_temp
+        description: "Average temperature over last 24 hours (°C)"
+        data_type: number
+        tests:
+          - not_null
+
+      - name: humidity
+        description: "Average humidity over last 24 hours (%)"
+        data_type: number
+        tests:
+          - not_null
+
+      - name: soil_moisture
+        description: "Average soil moisture over last 24 hours (%)"
+        data_type: number
+        tests:
+          - not_null
+
+      - name: ph
+        description: "Average soil pH over last 24 hours"
+        data_type: number
+        tests:
+          - not_null
+
+      - name: solar_radiation
+        description: "Average solar radiation over last 24 hours (W/m²)"
+        data_type: number
+        tests:
+          - not_null
+
+      - name: temp_7day_avg
+        description: "Rolling 7-day average temperature (°C)"
+        data_type: number
+
+  - name: fct_sensor_monitoring
+    description: "Real-time sensor monitoring with data quality checks and irrigation alerts. Powers dashboard and automated alerting system."
+#    tests:
+#      - dbt_utils.recency:
+#          datepart: day
+#          field: reading_timestamp
+#          interval: 2
+#          config:
+#            severity: warn
+    columns:
+      - name: reading_timestamp
+        description: "Timestamp of sensor reading"
+        data_type: timestamp_ntz
+        tests:
+          - not_null
+
+      - name: air_temp
+        description: "Air temperature (°C)"
+        data_type: number
+        tests:
+          - not_null
+
+      - name: humidity
+        description: "Relative humidity (%)"
+        data_type: number
+        tests:
+          - not_null
+
+      - name: soil_moisture
+        description: "Soil moisture content (%)"
+        data_type: number
+        tests:
+          - not_null
+
+      - name: ph_surface
+        description: "Surface soil pH"
+        data_type: number
+        tests:
+          - not_null
+
+      - name: temp_flag
+        description: "Data quality flag: 'OK' or 'ANOMALY' (temp outside -50 to 60°C range)"
+        data_type: varchar
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['OK', 'ANOMALY']
+
+      - name: moisture_flag
+        description: "Data quality flag: 'OK' or 'ANOMALY' (moisture outside 0-100% range)"
+        data_type: varchar
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['OK', 'ANOMALY']
+
+      - name: irrigation_alert
+        description: "Alert status: 'LOW_MOISTURE_ALERT' (<20%), 'HIGH_MOISTURE_ALERT' (>80%), or 'NORMAL'"
+        data_type: varchar
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['LOW_MOISTURE_ALERT', 'HIGH_MOISTURE_ALERT', 'NORMAL']
+
+  - name: dim_crop_benchmarks
+    description: "Reference dimension table with optimal growing conditions and yield statistics per crop type. Used for benchmarking and comparison."
+    columns:
+      - name: crop_type
+        description: "Type of crop"
+        data_type: varchar
+        tests:
+          - unique
+          - not_null
+
+      - name: avg_yield
+        description: "Historical average yield (hectograms per hectare)"
+        data_type: number
+        tests:
+          - not_null
+
+      - name: p25_yield
+        description: "25th percentile yield (lower quartile)"
+        data_type: number
+
+      - name: p75_yield
+        description: "75th percentile yield (upper quartile)"
+        data_type: number
+
+      - name: max_yield
+        description: "Maximum recorded yield"
+        data_type: number
+
+      - name: optimal_temp
+        description: "Average temperature for this crop across all observations (°C)"
+        data_type: number
+
+      - name: temp_stddev
+        description: "Standard deviation of temperature (indicates sensitivity to temp variation)"
+        data_type: number
+
+      - name: optimal_rainfall
+        description: "Average rainfall for this crop across all observations (mm)"
+        data_type: number
+
+      - name: typical_pesticide_use
+        description: "Average pesticide use for this crop (tonnes)"
+        data_type: number
+
+      - name: sample_size
+        description: "Number of observations used to calculate these statistics"
+        data_type: number
+        tests:
+          - not_null
