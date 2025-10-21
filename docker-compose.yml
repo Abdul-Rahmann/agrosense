@@ -49,6 +49,42 @@ services:
       start_period: 5s
     restart: always
 
+  mlflow:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mlflow_server
+    ports:
+      - "5001:5000"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      MLFLOW_BACKEND_STORE_URI: postgresql+psycopg2://${MLFLOW_USER}:${MLFLOW_PASSWORD}@${MLFLOW_HOST}:${MLFLOW_PORT}/${MLFLOW_DB}
+      MLFLOW_ARTIFACT_ROOT: /mlflow/artifacts
+    volumes:
+      - ./mlflow/artifacts:/mlflow/artifacts
+      - ./mlflow/config:/mlflow/config
+    command: >
+      mlflow server
+      --backend-store-uri ${MLFLOW_BACKEND_STORE_URI}
+      --default-artifact-root ${MLFLOW_ARTIFACT_ROOT}
+      --host 0.0.0.0
+      --port 5000
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:5000/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: always
+    networks:
+      - default
+
   airflow-webserver:
     <<: *airflow-common
     command: >
@@ -124,3 +160,7 @@ services:
 
 volumes:
   postgres_data: {}
+
+networks:
+  default:
+    name: agrosense_network
