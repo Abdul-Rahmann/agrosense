@@ -43,7 +43,13 @@ DOCKER-DBT COMMANDS
  11.dc run --rm dbt test
 
 
+POSTRES
+1.  docker exec -it postgres_db bash
+2.  psql -U agrosense -d agrosense_db or  docker exec -it postgres_db psql -U agrosense -d agrosense_db
+3. \i /docker-entrypoint-initdb.d/03_mlflow_db.sql
+4. docker exec -it postgres_db psql -U agrosense -d agrosense_db -c "ALTER USER agrosense WITH PASSWORD 'new_secure_password';"
 
-
-
-
+WHEN TO BUILD
+ls -la dockerfiles/Dockerfile.mlflow
+ls -la requirements/mlflow-requirements.txt
+docker images | grep mlflow
