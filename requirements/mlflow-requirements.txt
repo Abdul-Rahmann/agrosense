@@ -1,0 +1,23 @@
+# Database connectivity
+psycopg[binary]
+psycopg2-binary==2.9.9
+
+# Core utilities
+python-dotenv==1.0.1
+requests
+
+# Data processing
+numpy==1.24.3
+pandas
+
+# ML libraries
+scikit-learn
+joblib
+
+# Visualization
+matplotlib
+seaborn
+plotly
+
+# Hyperparameter tuning
+optuna

@@ -1,0 +1,20 @@
+# Database connectivity
+psycopg[binary]
+
+# Core utilities
+python-dotenv==1.0.1
+requests
+
+# Data processing
+numpy==1.24.3
+pandas
+
+# Airflow providers
+apache-airflow-providers-snowflake>=5.0.0
+apache-airflow-providers-postgres>=5.0.0
+
+# Snowflake connector
+snowflake-connector-python
+
+# MLflow integration (for triggering ML workflows from Airflow)
+mlflow
