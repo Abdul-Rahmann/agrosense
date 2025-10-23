@@ -1,0 +1,11 @@
+FROM ghcr.io/dbt-labs/dbt-snowflake:1.8.1
+
+COPY requirements/dbt-requirements.txt /tmp/requirements.txt
+
+RUN pip install --no-cache-dir -r /tmp/requirements.txt
+
+WORKDIR /usr/app
+
+ENV DBT_PROFILES_DIR=/root/.dbt
+
+CMD ["dbt", "run"]

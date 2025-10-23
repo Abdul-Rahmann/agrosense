@@ -1,0 +1,9 @@
+FROM ghcr.io/mlflow/mlflow:v2.22.2
+
+COPY requirements/mlflow-requirements.txt /tmp/requirements.txt
+
+RUN pip install --no-cache-dir -r /tmp/requirements.txt
+
+WORKDIR /mlflow
+
+EXPOSE 5000
