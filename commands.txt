@@ -53,3 +53,35 @@ WHEN TO BUILD
 ls -la dockerfiles/Dockerfile.mlflow
 ls -la requirements/mlflow-requirements.txt
 docker images | grep mlflow
+
+KILLING POSTGRES
+netstat -tuln | grep 5432, sudo kill -15 566
+
+
+DELETING THE CONTENT OF ALL TABLES
+-- Disable foreign key checks
+SET session_replication_role = replica;
+
+TRUNCATE TABLE
+    datasets,
+    experiment_tags,
+    experiments,
+    input_tags,
+    inputs,
+    latest_metrics,
+    metrics,
+    model_version_tags,
+    model_versions,
+    params,
+    registered_model_aliases,
+    registered_model_tags,
+    registered_models,
+    runs,
+    tags,
+    trace_info,
+    trace_request_metadata,
+    trace_tags
+RESTART IDENTITY CASCADE;
+
+-- Re-enable foreign key checks
+SET session_replication_role = DEFAULT;
