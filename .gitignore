@@ -208,3 +208,13 @@ __marimo__/
 logs/
 
 .idea/
+
+mlflow/artifacts/
+mlruns/
+*/artifacts/
+*.pkl
+*.h5
+*.pt
+*.npy
+*.csv
+data/
