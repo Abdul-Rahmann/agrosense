@@ -1,0 +1,12 @@
+# Exclude all log files and temporary files
+*.log
+*.pyc
+__pycache__
+*.md
+tests/
+.idea/
+.vscode/
+
+# Exclude large data files if not needed in container
+data/
+*.pkl
