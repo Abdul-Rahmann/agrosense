@@ -1,9 +1,19 @@
-FROM apache/airflow:2.7.3-python3.9
+FROM apache/airflow:2.9.3-python3.11
 
 COPY requirements/airflow-requirements.txt /tmp/requirements.txt
-
 COPY . /opt/airflow/agrosense
 
+USER root
+
+RUN mkdir -p /opt/airflow/agrosense/ml_models/temp \
+    /opt/airflow/agrosense/ml_models/data \
+    /opt/airflow/mlflow_artifacts \
+    && chown -R 50000:50000 /opt/airflow/agrosense \
+    && chown -R 50000:50000 /opt/airflow/mlflow_artifacts
+
+RUN apt-get update && apt-get install -y iputils-ping
+
+USER airflow
 RUN pip install --no-cache-dir -r /tmp/requirements.txt
 
 WORKDIR /opt/airflow

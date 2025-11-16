@@ -25,7 +25,12 @@ class BaseModel(ABC):
         self.config = config
         self.model = None
         self.is_trained = False
-        mlflow.set_tracking_uri(self.config.get('tracking_uri','http://localhost:5000'))
+
+        tracking_uri = self.config.get('tracking_uri', 'http://localhost:5000')
+        mlflow.set_tracking_uri(tracking_uri)
+        logger.info(f"MLflow tracking URI set to: {tracking_uri}")
+        print(f"MLflow tracking URI set to: {tracking_uri}")
+
         self.experiment_name = self.config.get('experiment_name', model_name)
 
     @abstractmethod
@@ -65,7 +70,7 @@ class BaseModel(ABC):
 
     def log_to_mlflow(self, params, metrics, artifacts=None):
         """
-        Log mode to MLflow
+        Log model to MLflow
 
         Parameters:
         -----------
@@ -76,6 +81,16 @@ class BaseModel(ABC):
         artifacts : dict, optional
             Additional artifacts to log
         """
+
+        experiment = mlflow.get_experiment_by_name(self.experiment_name)
+        if experiment is None:
+            experiment_id = mlflow.create_experiment(self.experiment_name)
+            logger.info(f"Created new MLflow experiment: {self.experiment_name} with id {experiment_id}")
+        else:
+            experiment_id = experiment.experiment_id
+            logger.info(f"Using existing MLflow experiment: {self.experiment_name} with id {experiment_id}")
+
+        mlflow.set_experiment(self.experiment_name)
 
         with mlflow.start_run(run_name=self.model_name):
             mlflow.log_params(params)
