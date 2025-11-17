@@ -32,8 +32,11 @@ def main():
         config = yaml.safe_load(f)
 
     logger.info("Loading data from Snowflake...")
-    loader = DataLoader(config_path=config_path)
-    df = loader.load_from_snowflake()
+
+    query = config['snowflake']['yield_prediction_data_query']
+    loader = DataLoader()
+
+    df = loader.load_from_snowflake(query)
 
     model = CropYieldPredictor(config['mlflow'])
 

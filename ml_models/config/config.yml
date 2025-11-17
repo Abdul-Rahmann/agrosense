@@ -6,7 +6,7 @@ snowflake:
   warehouse: ${SNOWFLAKE_WH}
   role: ${SNOWFLAKE_ROLE}
   schema: ${SNOWFLAKE_SCHEMA}
-  query: "SELECT * FROM AGROSENSE_DB.AGROSENSE_SCH.FCT_ML_TRAINING_DATASET"
+  yield_prediction_data_query: "SELECT * FROM AGROSENSE_DB.AGROSENSE_SCH.FCT_ML_TRAINING_DATASET"
 
 mlflow:
 #  tracking_uri: "http://localhost:5001"

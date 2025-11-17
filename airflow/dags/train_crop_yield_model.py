@@ -6,7 +6,7 @@ Runs weekly to retrain the model with the latest data
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 from datetime import datetime, timedelta
-import sys
+import sys, os
 from pathlib import Path
 
 project_root = Path('/opt/airflow/agrosense')
@@ -46,8 +46,12 @@ def load_data(**context):
         if not config_path.exists():
             raise FileNotFoundError(f"Config file not found: {config_path}")
 
-        loader = DataLoader(config_path=str(config_path))
-        df = loader.load_from_snowflake()
+        with open(config_path, 'r') as f:
+            config = yaml.safe_load(f)
+
+        loader = DataLoader()
+        query = config['snowflake']['yield_prediction_data_query']
+        df = loader.load_from_snowflake(query)
 
         logger.info(f"Loaded {len(df)} rows, {df.shape[1]} columns")
 

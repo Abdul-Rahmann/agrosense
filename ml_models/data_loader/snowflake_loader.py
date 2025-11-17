@@ -13,16 +13,16 @@ logger = logging.getLogger(__name__)
 class DataLoader:
     """Loads data from Snowflake for model development"""
 
-    def __init__(self, config_path='ml_models/config/config.yml'):
+    def __init__(self):
         load_dotenv()
-        with open(config_path, 'r') as f:
-            self.config = yaml.safe_load(f)
+        # with open(config_path, 'r') as f:
+        #     self.config = yaml.safe_load(f)
 
-    def load_from_snowflake(self):
+    def load_from_snowflake(self, query):
         """Loads data from Snowflake"""
         logger.info("Loading data from Snowflake...")
 
-        sf_config = self.config['snowflake']
+        # sf_config = self.config['snowflake']
         conn = connect(
             account=os.getenv('SNOWFLAKE_ACCOUNT'),
             user=os.getenv('SNOWFLAKE_USER'),
@@ -32,8 +32,8 @@ class DataLoader:
             role=os.getenv('SNOWFLAKE_ROLE'),
             schema=os.getenv('SNOWFLAKE_SCHEMA')
         )
-        logger.info("Loading dat...")
-        query = sf_config['query']
+        logger.info("Loading data from Snowflake...")
+        # query = sf_config['query']
         df = pd.read_sql(query, conn)
         conn.close()
 
