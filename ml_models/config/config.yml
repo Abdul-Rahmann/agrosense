@@ -7,6 +7,21 @@ snowflake:
   role: ${SNOWFLAKE_ROLE}
   schema: ${SNOWFLAKE_SCHEMA}
   yield_prediction_data_query: "SELECT * FROM AGROSENSE_DB.AGROSENSE_SCH.FCT_ML_TRAINING_DATASET"
+  current_condition_data_query1: |
+    SELECT 
+        AREA,
+        CROP_TYPE,
+        YEAR,
+        SCENARIO,
+        AVERAGE_RAINFALL_MM_PER_YEAR,
+        AVG_TEMP,
+        PESTICIDES_TONNES,
+        PESTICIDE_INTENSITY,
+        YEAR_IN_DECADE,
+        ERA
+    FROM AGROSENSE_DB.AGROSENSE_SCH.FCT_CURRENT_CONDITIONS
+    WHERE YEAR = 2025
+
 
 mlflow:
 #  tracking_uri: "http://localhost:5001"

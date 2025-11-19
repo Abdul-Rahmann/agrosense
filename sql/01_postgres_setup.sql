@@ -31,3 +31,20 @@ CREATE TABLE IF NOT EXISTS agrosense.soil (
     ph_100_200cm DECIMAL(5,2),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS agrosense.crop_yield_predictions (
+    id SERIAL PRIMARY KEY,
+    area VARCHAR(255) NOT NULL,
+    crop_type VARCHAR(255) NOT NULL,
+    year INTEGER NOT NULL,
+    scenario VARCHAR(50) NOT NULL,
+    predicted_yield_hg_ha DECIMAL(10, 2) NOT NULL,
+    predicted_yield_kg_ha DECIMAL(10, 2) NOT NULL,
+    prediction_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_predictions_area_crop ON agrosense.crop_yield_predictions(area, crop_type);
+CREATE INDEX idx_predictions_date ON agrosense.crop_yield_predictions(prediction_date);
+
+ALTER TABLE agrosense.crop_yield_predictions OWNER TO agrosense;

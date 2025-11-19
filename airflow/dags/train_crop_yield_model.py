@@ -282,7 +282,7 @@ def cleanup_temp_files(**context):
         shutil.rmtree(temp_dir)
         logger.info(f"Removed {temp_dir}")
     else:
-        logger.info(f"ℹ️  Temp directory doesn't exist: {temp_dir}")
+        logger.info(f"Temp directory doesn't exist: {temp_dir}")
 
 
 with DAG(
