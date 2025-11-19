@@ -6,82 +6,105 @@ from airflow.models import Variable
 from datetime import datetime
 from snowflake.connector.pandas_tools import write_pandas
 
-LOAD_TASK_ID = "load_to_snowflake"
-
 
 def load_weather_to_snowflake(**context):
-    pg_hook = PostgresHook(postgres_conn_id='postgres_default')
-    sf_hook = SnowflakeHook(snowflake_conn_id='snowflake_default')
+    pg = PostgresHook(postgres_conn_id='postgres_default')
+    sf = SnowflakeHook(snowflake_conn_id='snowflake_default')
 
-    weather_last_id = int(Variable.get('weather_last_processed_id', default_var=0))
-    print(f"LAST PROCESSED ID: {weather_last_id}")
-
-    query = f"SELECT * FROM agrosense.weather WHERE id > {weather_last_id} ORDER BY id"
-    df = pg_hook.get_pandas_df(query)
-    print(f"QUERY RESULTS: {df}")
+    last_id = int(Variable.get('weather_last_processed_id', default_var=0))
+    query = f"SELECT * FROM agrosense.weather WHERE id > {last_id} ORDER BY id"
+    df = pg.get_pandas_df(query)
 
     if not df.empty:
-        conn = sf_hook.get_conn()
+        conn = sf.get_conn()
         write_pandas(
             conn=conn,
             df=df,
             table_name="WEATHER",
             database="AGROSENSE_DB",
             schema="AGROSENSE_SCH",
-            auto_create_table=True,
-            overwrite=False
+            auto_create_table=True
         )
-
-        new_max_id = int(df['id'].max())
-        Variable.set('weather_last_processed_id', new_max_id)
-        print(f"Loaded {len(df)} rows. Last ID: {new_max_id}")
+        new_id = int(df['id'].max())
+        Variable.set('weather_last_processed_id', new_id)
     else:
         print("No new weather data to load")
 
+
 def load_soil_to_snowflake(**context):
-    pg_hook = PostgresHook(postgres_conn_id='postgres_default')
-    sf_hook = SnowflakeHook(snowflake_conn_id='snowflake_default')
+    pg = PostgresHook(postgres_conn_id='postgres_default')
+    sf = SnowflakeHook(snowflake_conn_id='snowflake_default')
 
-    soil_last_id = int(Variable.get('soil_last_processed_id', default_var=0))
-    print(f"LAST PROCESSED ID: {soil_last_id}")
-
-    query = f"SELECT * FROM agrosense.soil WHERE id > {soil_last_id} ORDER BY id"
-    df = pg_hook.get_pandas_df(query)
-    print(f"QUERY RESULTS: {df}")
+    last_id = int(Variable.get('soil_last_processed_id', default_var=0))
+    query = f"SELECT * FROM agrosense.soil WHERE id > {last_id} ORDER BY id"
+    df = pg.get_pandas_df(query)
 
     if not df.empty:
-        conn = sf_hook.get_conn()
+        conn = sf.get_conn()
         write_pandas(
             conn=conn,
             df=df,
             table_name="SOIL",
             database="AGROSENSE_DB",
             schema="AGROSENSE_SCH",
-            auto_create_table=True,
-            overwrite=False
+            auto_create_table=True
         )
-
-        new_max_id = int(df['id'].max())
-        Variable.set('soil_last_processed_id', new_max_id)
-        print(f"Loaded {len(df)} rows. Last ID: {new_max_id}")
+        new_id = int(df['id'].max())
+        Variable.set('soil_last_processed_id', new_id)
     else:
         print("No new soil data to load")
 
 
+def load_predictions_to_snowflake(**context):
+    pg = PostgresHook(postgres_conn_id='postgres_default')
+    sf = SnowflakeHook(snowflake_conn_id='snowflake_default')
+
+    last_id = int(Variable.get('yield_predictions_last_processed_id', default_var=0))
+    query = f"SELECT * FROM agrosense.crop_yield_predictions WHERE id > {last_id} ORDER BY id"
+    df = pg.get_pandas_df(query)
+
+    if not df.empty:
+        conn = sf.get_conn()
+        write_pandas(
+            conn=conn,
+            df=df,
+            table_name="CROP_YIELD_PREDICTIONS",
+            database="AGROSENSE_DB",
+            schema="AGROSENSE_SCH",
+            auto_create_table=True
+        )
+        new_id = int(df['id'].max())
+        Variable.set('yield_predictions_last_processed_id', new_id)
+    else:
+        print("No new prediction data to load")
+
+
+default_args = {
+    "owner": "agrosense",
+    "retries": 1
+}
+
 with DAG(
-        dag_id="load_postgres_to_snowflake",
-        start_date=datetime(2024, 1, 1),
-        schedule_interval="@daily",
-        catchup=False,
+    dag_id="load_postgres_to_snowflake",
+    default_args=default_args,
+    start_date=datetime(2024, 1, 1),
+    schedule_interval="@daily",
+    catchup=False
 ) as dag:
-    load_weather_task = PythonOperator(
-        task_id=LOAD_TASK_ID,
-        python_callable=load_weather_to_snowflake,
+
+    weather = PythonOperator(
+        task_id="load_weather_to_snowflake",
+        python_callable=load_weather_to_snowflake
     )
 
-    load_soil_task = PythonOperator(
+    soil = PythonOperator(
         task_id="load_soil_to_snowflake",
-        python_callable=load_soil_to_snowflake,
+        python_callable=load_soil_to_snowflake
     )
 
-    load_weather_task >> load_soil_task
+    predictions = PythonOperator(
+        task_id="load_predictions_to_snowflake",
+        python_callable=load_predictions_to_snowflake
+    )
+
+    weather >> soil >> predictions

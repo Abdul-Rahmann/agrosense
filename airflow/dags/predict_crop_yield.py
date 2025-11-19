@@ -172,6 +172,7 @@ def save_to_database(**context):
     )
 
     # Save to database
+    predictions.columns = predictions.columns.str.lower()
     predictions.to_sql(
         'crop_yield_predictions',
         engine,
