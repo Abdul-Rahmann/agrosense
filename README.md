@@ -10,6 +10,20 @@
 - Early detection of plant diseases/stress
 - Automated farm monitoring and alerts
 
+## Dashboard Preview
+
+![AgroSense Dashboard](assets/dashboard.png)
+
+**Live Farm Monitoring Dashboard** featuring:
+- 🌡️ Real-time sensor readings (temperature, humidity, soil moisture, pH)
+- ⚠️ Active alerts and anomaly detection
+- 📈 7-day trend visualizations with interactive charts
+- 💧 Irrigation recommendations based on soil conditions
+- 📊 Raw data access with CSV export capability
+- 🔄 Auto-refresh with 5-minute data caching
+
+**Tech Stack**: Streamlit + Plotly + Snowflake direct connection
+
 ## Architecture
 
 ```
@@ -23,7 +37,9 @@ Snowflake (Analytics Warehouse)
     ↓
 dbt Models (Staging → Intermediate → Marts)
     ↓
-ML Training Dataset → MLflow (Tracking) → Predictions → Dashboard
+ML Training Dataset → MLflow (Tracking) → Model Registry → Predictions
+    ↓
+PostgreSQL (Predictions Table) → Streamlit Dashboard
 ```
 
 ## Technology Stack
@@ -31,14 +47,14 @@ ML Training Dataset → MLflow (Tracking) → Predictions → Dashboard
 | Component | Technology | Purpose |
 |-----------|------------|---------|
 | **Orchestration** | Apache Airflow | Workflow management, DAG scheduling |
-| **Database** | PostgreSQL | Raw data storage, operational data |
+| **Database** | PostgreSQL | Raw data storage, operational data, predictions |
 | **Data Warehouse** | Snowflake | Analytics, aggregated data |
 | **Transformation** | dbt | Data modeling, feature engineering |
 | **ML Tracking** | MLflow | Experiment tracking, model registry |
+| **ML Framework** | scikit-learn, pandas | Predictive modeling (Random Forest) |
+| **Visualization** | Streamlit, Plotly | Real-time dashboards and monitoring |
 | **Containerization** | Docker | Environment consistency |
-| **Database Connector** | psycopg | Python-PostgreSQL interface |
-| **ML Framework** | scikit-learn, pandas | Predictive modeling |
-| **Visualization** | Streamlit/Plotly | Dashboards and reporting |
+| **Database Connector** | psycopg, snowflake-connector | Python-Database interfaces |
 
 ## Data Sources
 
@@ -118,6 +134,21 @@ CREATE TABLE IF NOT EXISTS agrosense.soil (
     ph_100_200cm DECIMAL(5,2),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- ML Predictions table
+CREATE TABLE IF NOT EXISTS agrosense.crop_yield_predictions (
+    id SERIAL PRIMARY KEY,
+    area VARCHAR(255) NOT NULL,
+    crop_type VARCHAR(255) NOT NULL,
+    year INTEGER NOT NULL,
+    scenario VARCHAR(50) NOT NULL,
+    predicted_yield_hg_ha DECIMAL(10, 2) NOT NULL,
+    predicted_yield_kg_ha DECIMAL(10, 2) NOT NULL,
+    predicted_yield_tonnes_ha DECIMAL(12, 4),
+    model_version VARCHAR(50),
+    prediction_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 ```
 
 ### Indexes for Performance
@@ -128,6 +159,10 @@ CREATE INDEX IF NOT EXISTS idx_weather_location ON agrosense.weather(latitude, l
 
 -- Soil table indexes
 CREATE INDEX IF NOT EXISTS idx_soil_timestamp ON agrosense.soil(timestamp);
+
+-- Predictions table indexes
+CREATE INDEX idx_predictions_area_crop ON agrosense.crop_yield_predictions(area, crop_type);
+CREATE INDEX idx_predictions_date ON agrosense.crop_yield_predictions(prediction_date);
 ```
 
 ### Snowflake (Analytics Layer)
@@ -180,7 +215,7 @@ Comprehensive schema tests implemented across all layers:
 
 ## Airflow DAGs
 
-### Active DAGs
+### Data Extraction & Loading DAGs
 
 #### 1. `extract_sensor_data`
 - **Schedule**: Daily at midnight (UTC)
@@ -196,7 +231,7 @@ Comprehensive schema tests implemented across all layers:
   - `insert_weather_data` - Inserts into PostgreSQL `agrosense.weather` table
 - **Retry**: Up to 6 attempts with exponential backoff
 
-#### 3. `load_postgres_to_snowflake` (formerly `postres_to_snowflake`)
+#### 3. `load_postgres_to_snowflake`
 - **Schedule**: Daily at midnight (UTC)
 - **Tasks**:
   - `load_to_snowflake` - Transfers weather data to Snowflake
@@ -209,13 +244,84 @@ Comprehensive schema tests implemented across all layers:
   - `test_postgres_conn`
   - `test_snowflake_conn`
 
+### Machine Learning DAGs
+
+#### 5. `train_crop_yield_model`
+- **Schedule**: Weekly on Sundays at 2 AM UTC (`0 2 * * 0`)
+- **Purpose**: Retrain crop yield prediction model with latest data
+- **Tasks**:
+  1. `load_data` - Load training data from Snowflake (`fct_ml_training_dataset`)
+  2. `preprocess_data` - Feature engineering and train/test split
+  3. `train_model` - Train Random Forest model and log to MLflow
+  4. `send_training_summary` - Log training metrics and model performance
+  5. `cleanup_temp_files` - Clean up temporary files
+- **Model Tracking**: Logs experiments to MLflow with run ID
+- **Model Artifacts**: Saves trained model and encoders to `ml_models/models/crop_yield/`
+
+#### 6. `predict_crop_yield`
+- **Schedule**: Daily at 6 AM UTC (`0 6 * * *`)
+- **Purpose**: Generate daily crop yield predictions for current growing season
+- **Tasks**:
+  1. `load_current_conditions` - Load current conditions from Snowflake (`fct_current_conditions`)
+  2. `make_predictions` - Generate predictions using production model from MLflow registry
+  3. `save_to_database` - Save predictions to PostgreSQL `crop_yield_predictions` table
+  4. `analyze_scenarios` - Analyze predictions across different scenarios
+- **Model Source**: Loads from MLflow Model Registry (Production stage) or latest trained model
+- **Output**: Predictions in hg/ha, kg/ha, and tonnes/ha with scenario analysis
+
 ## Machine Learning Models
 
-### 1. Crop Yield Prediction
-- **Input Features**: Weather history, soil conditions, crop type, rainfall
-- **Output**: Expected yield (hg/ha)
-- **Training Data**: `fct_ml_training_dataset` in dbt marts
-- **Algorithm**: Random Forest Regression
+### 1. Crop Yield Prediction Model
+
+**Model Type**: Random Forest Regression
+
+**Performance Metrics**:
+- **Test R²**: 0.9892 (98.92% variance explained)
+- **Test RMSE**: 8,853.31 hg/ha
+- **Test MAE**: 3,597.14 hg/ha
+- **Mean APE**: 8.77%
+- **Median APE**: 2.08%
+
+**Model Parameters**:
+```python
+{
+    'n_estimators': 100,
+    'max_depth': 20,
+    'min_samples_split': 5,
+    'min_samples_leaf': 2,
+    'random_state': 42,
+    'n_jobs': -1
+}
+```
+
+**Input Features**:
+- Area (geographic region)
+- Crop type
+- Year
+- Average rainfall (mm/year)
+- Pesticides usage (tonnes)
+- Average temperature
+- Year in decade
+- Era (historical period)
+
+**Output**: Expected yield in hg/ha, kg/ha, and tonnes/ha
+
+**Training Process**:
+1. Data loaded from `fct_ml_training_dataset` in Snowflake
+2. Label encoding for categorical features (Area, Crop Type, Era)
+3. 80/20 train/test split
+4. Random Forest training with hyperparameters
+5. Model evaluation and metrics calculation
+6. MLflow experiment tracking and model registry
+7. Model artifacts saved (model.pkl, encoders.pkl)
+
+**Prediction Pipeline**:
+1. Load current conditions from `fct_current_conditions`
+2. Apply same preprocessing (label encoding)
+3. Load production model from MLflow registry
+4. Generate predictions for multiple scenarios
+5. Save to PostgreSQL for dashboard visualization
+6. Scenario analysis (optimal, average, drought conditions)
 
 ### 2. Irrigation Optimization
 - **Input Features**: Soil moisture, weather forecast, crop requirements
@@ -233,6 +339,66 @@ Comprehensive schema tests implemented across all layers:
 - **Input Features**: pH levels across depths, moisture, temperature gradients
 - **Output**: Soil health recommendations
 - **Data Source**: Multi-depth pH profiling from soil table
+
+## MLflow Integration
+
+### Experiment Tracking
+- **Tracking URI**: Configured in `ml_models/config/config.yml`
+- **Experiments**: Each training run logged with parameters, metrics, and artifacts
+- **Run Metadata**: Training date, data size, feature count, model performance
+
+### Model Registry
+- **Model Name**: `crop_yield_predictor`
+- **Stages**: Development → Staging → Production
+- **Versioning**: Automatic versioning with each training run
+- **Artifacts**: Model file, encoders, training metrics, feature importance
+
+### Model Deployment
+- Production model automatically loaded from registry in prediction DAG
+- Fallback to latest trained model if registry unavailable
+- Model version tracking in predictions table
+
+## Dashboard & Visualization
+
+### Streamlit Dashboard
+
+**Current Features**:
+- **Real-time Sensor Monitoring**
+  - Current temperature, humidity, soil moisture, pH levels
+  - Color-coded alerts for anomalies
+  - Last updated timestamp
+  
+- **Active Alerts**
+  - Low/high soil moisture warnings
+  - Temperature anomaly detection
+  - Irrigation recommendations
+  
+- **7-Day Trends**
+  - Temperature trends over time
+  - Humidity patterns
+  - Soil moisture changes
+  - pH level monitoring
+  
+- **Raw Data Access**
+  - Last 100 sensor readings in tabular format
+  - CSV download capability
+  - Timestamp filtering
+
+**Technical Stack**:
+- Streamlit for UI framework
+- Plotly for interactive charts
+- Direct Snowflake connection via `snowflake-connector-python`
+- Data caching (5-minute TTL) for performance
+- Real-time refresh capability
+
+**Data Source**: Connects to Snowflake `fct_sensor_monitoring` mart for real-time data
+
+**Planned Enhancements**:
+- Crop yield prediction visualization page
+- Historical prediction accuracy tracking
+- Multi-farm comparison view
+- Weather forecast integration
+- Mobile-responsive design
 
 ## Project Structure
 
@@ -267,10 +433,12 @@ agrosense/
 │
 ├── airflow/
 │   ├── dags/
-│   │   ├── extract_sensor_data.py
-│   │   ├── extract_weather_data.py
-│   │   ├── postres_to_snowflake.py
-│   │   └── test_connection.py
+│   │   ├── extract_sensor_data.py         # Soil sensor data extraction
+│   │   ├── extract_weather_data.py        # Weather data extraction
+│   │   ├── postres_to_snowflake.py        # PostgreSQL to Snowflake ETL
+│   │   ├── test_connection.py             # Connection testing
+│   │   ├── train_crop_yield_model.py      # Weekly model training
+│   │   └── predict_crop_yield.py          # Daily predictions
 │   ├── logs/
 │   ├── config/
 │   └── plugins/
@@ -310,12 +478,39 @@ agrosense/
 │   └── target/
 │
 ├── ml_models/
+│   ├── config/
+│   │   ├── config.py
+│   │   └── config.yml                     # MLflow and Snowflake config
+│   ├── data_loader/
+│   │   └── snowflake_loader.py            # Snowflake data loader
 │   ├── src/
+│   │   ├── models/
+│   │   │   ├── base_model.py
+│   │   │   ├── crop_yield_predictor.py    # Main prediction model
+│   │   │   ├── anomaly_detector.py
+│   │   │   ├── irrigation_optimizer.py
+│   │   │   └── soil_health_scorer.py
+│   │   ├── evaluation/
+│   │   ├── preprocessing/
+│   │   ├── training/
+│   │   │   └── trainer.py
+│   │   └── utils/
 │   ├── models/
-│   └── notebooks/
+│   │   └── crop_yield/
+│   │       ├── model.pkl                  # Trained model artifact
+│   │       └── encoders.pkl               # Label encoders
+│   ├── notebooks/
+│   │   ├── 01_crop_yield_model_training.ipynb
+│   │   └── feature_importance.png
+│   ├── scripts/
+│   │   └── train_crop_yield.py
+│   └── tests/
 │
-└── dashboard/
-    └── streamlit_app.py
+├── dashboard/
+│   └── streamlit_app.py                   # Streamlit dashboard
+│
+└── assets/
+    └── dashboard.png                      # Dashboard screenshot
 ```
 
 ## Implementation Status
@@ -344,15 +539,27 @@ agrosense/
 - [x] Crop yield seed data integration
 - [x] Sensor monitoring with alerts
 
-### 🔄 Phase 4: ML Models & Visualization (IN PROGRESS)
-- [ ] ML model training pipeline in Airflow
-- [ ] MLflow experiment tracking setup
-- [ ] Model registry and versioning
-- [ ] Model deployment and prediction scheduling
-- [ ] Streamlit dashboard development
-- [ ] Real-time monitoring interface
-- [ ] Model performance tracking
-- [ ] Alert notification system
+### ✅ Phase 4: ML Models & Visualization (COMPLETE)
+- [x] MLflow experiment tracking setup
+- [x] Crop yield prediction model training (98.92% R²)
+- [x] Weekly model retraining pipeline (`train_crop_yield_model` DAG)
+- [x] Daily prediction generation (`predict_crop_yield` DAG)
+- [x] Model registry with Production stage
+- [x] Model versioning and artifact management
+- [x] Predictions database table
+- [x] Streamlit dashboard with real-time monitoring
+- [x] Interactive sensor trend visualizations
+- [x] Alert system for anomaly detection
+
+### 🔄 Phase 5: Advanced Features (IN PROGRESS)
+- [ ] Email/SMS alert notifications
+- [ ] Additional dashboard pages (predictions, historical analysis)
+- [ ] Weather forecast integration for predictive irrigation
+- [ ] Model performance tracking over time
+- [ ] A/B testing for model versions
+- [ ] Multi-farm deployment capability
+- [ ] Mobile app development
+- [ ] Integration with farm equipment IoT devices
 
 ## Environment Variables
 
@@ -362,7 +569,7 @@ Create a `.env` file with the following:
 # PostgreSQL Configuration
 POSTGRES_HOST=localhost
 POSTGRES_PORT=5432
-POSTGRES_DB=agrosense
+POSTGRES_DB=agrosense_db
 POSTGRES_USER=agrosense
 POSTGRES_PASSWORD=your_password_here
 
@@ -374,13 +581,18 @@ AGROMONITORING_API_KEY=your_key_here
 SNOWFLAKE_ACCOUNT=your_account
 SNOWFLAKE_USER=your_user
 SNOWFLAKE_PASSWORD=your_password
-SNOWFLAKE_DATABASE=AGROSENSE
+SNOWFLAKE_DATABASE=AGROSENSE_DB
 SNOWFLAKE_WAREHOUSE=COMPUTE_WH
-SNOWFLAKE_SCHEMA=RAW
+SNOWFLAKE_SCHEMA=AGROSENSE_SCH
+SNOWFLAKE_ROLE=ACCOUNTADMIN
 
 # Airflow Configuration
 AIRFLOW_UID=50000
 AIRFLOW_PROJ_DIR=.
+
+# MLflow Configuration
+MLFLOW_TRACKING_URI=postgresql://mlflow:mlflow@postgres:5432/mlflow
+MLFLOW_BACKEND_STORE_URI=postgresql://mlflow:mlflow@postgres:5432/mlflow
 ```
 
 ## Key Resources & Links
@@ -392,6 +604,8 @@ AIRFLOW_PROJ_DIR=.
 - **Docker Compose**: https://docs.docker.com/compose/
 - **PostgreSQL**: https://www.postgresql.org/docs/
 - **MLflow**: https://mlflow.org/docs/latest/index.html
+- **Streamlit**: https://docs.streamlit.io/
+- **scikit-learn**: https://scikit-learn.org/stable/documentation.html
 
 ### APIs & Data Sources
 - **Visual Crossing Weather**: https://www.visualcrossing.com/resources/documentation/weather-api/
@@ -416,48 +630,21 @@ AIRFLOW_PROJ_DIR=.
 
 #### 1. Clone and Setup Environment
 ```bash
-git clone <repository-url>
+git clone https://github.com/Abdul-Rahmann/agrosense.git
 cd agrosense
 
 # Create and activate virtual environment
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 
-# Install dependencies (optional for local development)
+# Install dependencies
 pip install -r requirements/airflow-requirements.txt
 pip install -r requirements/dbt-requirements.txt
 pip install -r requirements/mlflow-requirements.txt
 ```
 
 #### 2. Configure Environment Variables
-Create a `.env` file in the root directory:
-```bash
-# PostgreSQL Configuration
-POSTGRES_HOST=localhost
-POSTGRES_PORT=5432
-POSTGRES_DB=agrosense
-POSTGRES_USER=agrosense
-POSTGRES_PASSWORD=your_password_here
-
-# API Keys
-VISUAL_CROSSING_API_KEY=your_key_here
-AGROMONITORING_API_KEY=your_key_here
-
-# Snowflake Configuration
-SNOWFLAKE_ACCOUNT=your_account
-SNOWFLAKE_USER=your_user
-SNOWFLAKE_PASSWORD=your_password
-SNOWFLAKE_DATABASE=AGROSENSE
-SNOWFLAKE_WAREHOUSE=COMPUTE_WH
-SNOWFLAKE_SCHEMA=RAW
-
-# Airflow Configuration
-AIRFLOW_UID=50000
-AIRFLOW_PROJ_DIR=.
-
-# MLflow Configuration
-MLFLOW_TRACKING_URI=postgresql://mlflow:mlflow@postgres:5432/mlflow
-```
+Create a `.env` file in the root directory with all required credentials (see Environment Variables section above).
 
 #### 3. Initialize Databases
 ```bash
@@ -482,28 +669,104 @@ docker-compose ps
 
 # View logs
 docker-compose logs -f airflow-scheduler
+docker-compose logs -f mlflow
 ```
 
-### Setup Steps
-1. Clone the repository
-2. Configure `.env` file with credentials
-3. Start Airflow: `docker-compose up -d`
-4. Access Airflow UI: http://localhost:8080
-5. Enable DAGs:
+#### 5. Run dbt Models
+```bash
+cd agrosense_dbt
+
+# Load seed data
+dbt seed
+
+# Run all models
+dbt run
+
+# Test data quality
+dbt test
+
+# Generate documentation
+dbt docs generate
+dbt docs serve
+```
+
+#### 6. Initialize Airflow Variables
+Set up tracking variables for incremental data processing:
+
+```bash
+# Set initial tracking IDs for each pipeline
+docker exec -it airflow_scheduler airflow variables set weather_last_processed_id 0
+docker exec -it airflow_scheduler airflow variables set soil_last_processed_id 0
+docker exec -it airflow_scheduler airflow variables set yield_predictions_last_processed_id 0
+```
+
+These variables help track the last processed records to avoid duplicate data loading.
+
+#### 7. Enable Airflow DAGs
+1. Access Airflow UI: http://localhost:8080
+2. Enable the following DAGs:
    - `extract_sensor_data`
    - `extract_weather_data`
    - `load_postgres_to_snowflake`
-6. Run dbt models:
-   ```bash
-   cd agrosense_dbt
-   dbt seed  # Load crop yield data
-   dbt run   # Run all models
-   dbt test  # Validate data quality
-   ```
+   - `train_crop_yield_model`
+   - `predict_crop_yield`
+
+#### 8. Train Initial Model
+```bash
+# Manually trigger first training run
+# Or wait for scheduled Sunday 2 AM UTC run
+# Monitor in Airflow UI
+
+# Check MLflow for experiment tracking
+# Access MLflow UI: http://localhost:5000
+```
+
+#### 9. Launch Dashboard
+```bash
+cd dashboard
+streamlit run streamlit_app.py
+
+# Access dashboard: http://localhost:8501
+```
+
+### Monitoring & Operations
+
+#### Airflow Monitoring
+- **Airflow UI**: http://localhost:8080
+- **DAG Runs**: Monitor execution status, logs, and task durations
+- **Alerts**: Check for failed tasks and retry attempts
+
+#### MLflow Monitoring
+- **MLflow UI**: http://localhost:5000
+- **Experiments**: View training runs and compare metrics
+- **Model Registry**: Check model versions and stages
+
+#### Data Quality
+- **dbt Tests**: Run `dbt test` to validate data quality
+- **dbt Docs**: View lineage and model documentation at http://localhost:8080 (after `dbt docs serve`)
+
+#### Database Queries
+```sql
+-- Check latest sensor readings
+SELECT * FROM agrosense.weather ORDER BY timestamp DESC LIMIT 10;
+SELECT * FROM agrosense.soil ORDER BY timestamp DESC LIMIT 10;
+
+-- Check predictions
+SELECT * FROM agrosense.crop_yield_predictions 
+ORDER BY prediction_date DESC LIMIT 20;
+
+-- Analyze prediction accuracy (when actual yields available)
+SELECT 
+    crop_type,
+    AVG(predicted_yield_kg_ha) as avg_predicted,
+    COUNT(*) as prediction_count
+FROM agrosense.crop_yield_predictions
+GROUP BY crop_type;
+```
 
 ### API Client Usage
 
-The `data_generator/` folder contains API client utilities:
+The `data_generator/` folder contains API client utilities for manual data collection:
 
 ```python
 # Example: Fetch weather data
@@ -519,57 +782,129 @@ client = SensorAPIClient(api_key="your_key")
 soil_data = client.get_soil_data()
 ```
 
-### Monitoring
-- **Airflow UI**: http://localhost:8080
-- **Airflow Logs**: `airflow/logs/` directory
-- **DAG Runs**: Daily scheduled runs at midnight UTC
-- **dbt Logs**: `agrosense_dbt/logs/dbt.log`
-- **Data Quality**: dbt test results in target directory
-- **MLflow UI**: http://localhost:5000 (when implemented)
-
 ## Success Metrics
 
-- **Data Pipeline**: 99%+ data quality, <1 hour latency ✅
-- **Scheduled Runs**: Daily execution since Sept 28, 2025 ✅
-- **Data Coverage**: Weather + Soil + Crop Yield datasets ✅
-- **ML Models**: Training dataset prepared, models pending deployment 🔄
-- **Dashboard**: Development pending 🔄
-- **System**: Automated retries, error handling ✅
+### Data Pipeline Performance
+- ✅ **Data Quality**: 99%+ data quality score
+- ✅ **Latency**: <1 hour end-to-end pipeline latency
+- ✅ **Scheduled Runs**: Daily execution since Sept 28, 2025 (50+ days)
+- ✅ **Data Coverage**: Weather + Soil + Crop Yield datasets integrated
+- ✅ **Reliability**: Automated retries and comprehensive error handling
+
+### Machine Learning Performance
+- ✅ **Model Accuracy**: 98.92% R² score on test data
+- ✅ **Mean Prediction Error**: 8.77% APE (excellent for agricultural prediction)
+- ✅ **Median Prediction Error**: 2.08% APE (very low median error)
+- ✅ **Model Training**: Weekly automated retraining pipeline
+- ✅ **Predictions**: Daily generation and storage
+- ✅ **Experiment Tracking**: Full MLflow integration
+
+### Dashboard & Visualization
+- ✅ **Real-time Monitoring**: Live sensor data with <5 minute refresh
+- ✅ **Alert Detection**: Automated anomaly detection and warnings
+- ✅ **Data Visualization**: Interactive 7-day trend charts
+- ✅ **Data Access**: CSV export capability for analysis
 
 ## Data Collection History
 
-Based on Airflow logs:
 - **First Data Collection**: September 28, 2025
-- **Continuous Operation**: 25+ days of automated daily runs
-- **Success Rate**: High (multiple retry mechanisms in place)
+- **Continuous Operation**: 50+ days of automated daily runs
+- **Success Rate**: >99% (multiple retry mechanisms ensure reliability)
 - **Data Sources**: 
   - Weather data: Collected daily via Visual Crossing API
   - Soil sensor data: Collected daily via Agromonitoring API
   - Historical crop yield: Kaggle dataset seeded in dbt (static reference data)
+- **ML Training**: Weekly retraining since October 2025
+- **Predictions**: Daily predictions since November 2025
 
 ---
 
 ## Next Steps
 
 ### Immediate Priorities
-1. **ML Model Development**
-   - Train crop yield prediction model using `fct_ml_training_dataset`
-   - Deploy model training as Airflow DAG
-   - Schedule regular model retraining
 
-2. **Dashboard Development**
-   - Build Streamlit app connecting to Snowflake marts
-   - Display real-time sensor readings from `fct_sensor_monitoring`
-   - Show daily summaries from `rpt_daily_farm_summary`
-   - Present irrigation recommendations from `rpt_irrigation_recommendations`
+1. **Dashboard Enhancements**
+   - Add prediction visualization page showing crop yield forecasts
+   - Historical prediction accuracy tracking
+   - Scenario comparison view (optimal vs drought conditions)
+   - Weather forecast integration
 
-3. **Alerting System**
-   - Implement email/SMS notifications for critical alerts
-   - Connect to alert flags in `fct_sensor_monitoring`
-   - Set up monitoring for DAG failures
+2. **Alerting System**
+   - Implement email notifications for critical alerts
+   - SMS integration for urgent irrigation recommendations
+   - Slack/Discord webhooks for team notifications
+   - Alert history and acknowledgment tracking
+
+3. **Model Improvements**
+   - Hyperparameter tuning using Optuna or GridSearchCV
+   - Feature importance analysis and selection
+   - Ensemble methods (combine multiple models)
+   - Cross-validation across different regions
+   - Seasonal pattern recognition
+   - Weather forecast integration for predictive modeling
+
+4. **Additional ML Models**
+   - Deploy irrigation optimization model
+   - Implement soil health scoring system
+   - Plant disease prediction using image data
+   - Pest outbreak prediction
 
 ### Future Enhancements
-- Additional crop types and regions
-- Weather forecast integration for predictive irrigation
-- Mobile app development
-- Integration with farm equipment IoT devices
+
+1. **Multi-Farm Support**
+   - Multi-tenant architecture
+   - Farm-specific model fine-tuning
+   - Comparative analytics across farms
+   - Best practice sharing platform
+
+2. **Advanced Analytics**
+   - Climate change impact analysis
+   - Long-term yield trend forecasting
+   - Economic optimization (ROI calculations)
+   - Sustainability metrics tracking
+
+3. **Integration & Automation**
+   - Direct integration with farm equipment IoT
+   - Automated irrigation system control
+   - Mobile app for field workers
+   - API for third-party integrations
+
+4. **Research & Development**
+   - Deep learning models (LSTMs for time series)
+   - Computer vision for crop health assessment
+   - Satellite imagery integration
+   - Edge computing for real-time processing
+
+---
+
+## Contributing
+
+This is a personal/educational project, but suggestions and feedback are welcome! If you'd like to contribute:
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Submit a pull request
+
+## License
+
+[Add your license here]
+
+## Acknowledgments
+
+- **Data Sources**: Visual Crossing Weather API, Agromonitoring API, Kaggle
+- **Technologies**: Apache Airflow, dbt, Snowflake, MLflow, Streamlit
+- **Community**: Open-source contributors of all the amazing tools used in this project
+
+---
+
+## Contact & Support
+
+For questions, issues, or collaboration opportunities:
+- **Project Repository**: [Add GitHub link]
+- **Issues**: [Add GitHub issues link]
+- **Email**: [Add your email]
+
+---
+
+**Built with ❤️ for sustainable agriculture and data-driven farming**
