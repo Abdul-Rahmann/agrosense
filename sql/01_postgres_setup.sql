@@ -40,6 +40,8 @@ CREATE TABLE IF NOT EXISTS agrosense.crop_yield_predictions (
     scenario VARCHAR(50) NOT NULL,
     predicted_yield_hg_ha DECIMAL(10, 2) NOT NULL,
     predicted_yield_kg_ha DECIMAL(10, 2) NOT NULL,
+    predicted_yield_tonnes_ha DECIMAL(12, 4),
+    model_version VARCHAR(50),
     prediction_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
