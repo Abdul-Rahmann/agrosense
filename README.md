@@ -877,19 +877,6 @@ soil_data = client.get_soil_data()
 
 ---
 
-## Contributing
-
-This is a personal/educational project, but suggestions and feedback are welcome! If you'd like to contribute:
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Submit a pull request
-
-## License
-
-[Add your license here]
-
 ## Acknowledgments
 
 - **Data Sources**: Visual Crossing Weather API, Agromonitoring API, Kaggle
@@ -898,13 +885,5 @@ This is a personal/educational project, but suggestions and feedback are welcome
 
 ---
 
-## Contact & Support
-
-For questions, issues, or collaboration opportunities:
-- **Project Repository**: [Add GitHub link]
-- **Issues**: [Add GitHub issues link]
-- **Email**: [Add your email]
-
----
 
 **Built with ❤️ for sustainable agriculture and data-driven farming**
