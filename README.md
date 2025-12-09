@@ -12,7 +12,11 @@
 
 ## Dashboard Preview
 
-![AgroSense Dashboard](assets/dashboard.png)
+![AgroSense Landing Page](assets/landing_page.png)
+
+### Crop Yield Prediction Page
+
+ ![AgroSense Crop Yield Prediction](assets/crop_prediction_page.png)
 
 **Live Farm Monitoring Dashboard** featuring:
 - 🌡️ Real-time sensor readings (temperature, humidity, soil moisture, pH)
