@@ -10,6 +10,10 @@ import sys, yaml
 from pathlib import Path
 import pandas as pd
 import logging
+from airflow.providers.postgres.hooks.postgres import PostgresHook
+from airflow.providers.snowflake.hooks.snowflake import SnowflakeHook
+from snowflake.connector.pandas_tools import write_pandas
+from airflow.models import Variable
 
 project_root = Path('/opt/airflow/agrosense')
 sys.path.insert(0, str(project_root))
@@ -214,6 +218,39 @@ def analyze_scenarios(**context):
     logger.info("=" * 60)
 
 
+def sync_predictions_to_snowflake(**context):
+    """
+    Sync prediction results from Postgres to Snowflake using
+    the exact logic and behaviour of the working loader DAG.
+    """
+
+    pg = PostgresHook(postgres_conn_id='postgres_default')
+    sf = SnowflakeHook(snowflake_conn_id='snowflake_default')
+
+    # Match variable key exactly
+    last_id = int(Variable.get('yield_predictions_last_processed_id', default_var=0))
+    query = (
+        f"SELECT * FROM agrosense.crop_yield_predictions "
+        f"WHERE id > {last_id} ORDER BY id"
+    )
+
+    df = pg.get_pandas_df(query)
+
+    if not df.empty:
+        conn = sf.get_conn()
+        write_pandas(
+            conn=conn,
+            df=df,
+            table_name="CROP_YIELD_PREDICTIONS",
+            database="AGROSENSE_DB",
+            schema="AGROSENSE_SCH",
+            auto_create_table=True
+        )
+
+        new_id = int(df["id"].max())
+        Variable.set("yield_predictions_last_processed_id", new_id)
+    else:
+        print("No new prediction data to load")
 with DAG(
         'predict_crop_yield',
         default_args=default_args,
@@ -242,4 +279,9 @@ with DAG(
         python_callable=analyze_scenarios,
     )
 
-    load_task >> predict_task >> save_task >> analyze_task
+    sync_predictions = PythonOperator(
+        task_id='sync_predictions_to_snowflake',
+        python_callable=sync_predictions_to_snowflake
+    )
+
+    load_task >> predict_task >> save_task >> analyze_task >> sync_predictions

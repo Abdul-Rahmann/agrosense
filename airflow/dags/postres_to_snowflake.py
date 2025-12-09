@@ -54,31 +54,6 @@ def load_soil_to_snowflake(**context):
     else:
         print("No new soil data to load")
 
-
-def load_predictions_to_snowflake(**context):
-    pg = PostgresHook(postgres_conn_id='postgres_default')
-    sf = SnowflakeHook(snowflake_conn_id='snowflake_default')
-
-    last_id = int(Variable.get('yield_predictions_last_processed_id', default_var=0))
-    query = f"SELECT * FROM agrosense.crop_yield_predictions WHERE id > {last_id} ORDER BY id"
-    df = pg.get_pandas_df(query)
-
-    if not df.empty:
-        conn = sf.get_conn()
-        write_pandas(
-            conn=conn,
-            df=df,
-            table_name="CROP_YIELD_PREDICTIONS",
-            database="AGROSENSE_DB",
-            schema="AGROSENSE_SCH",
-            auto_create_table=True
-        )
-        new_id = int(df['id'].max())
-        Variable.set('yield_predictions_last_processed_id', new_id)
-    else:
-        print("No new prediction data to load")
-
-
 default_args = {
     "owner": "agrosense",
     "retries": 1
@@ -102,9 +77,4 @@ with DAG(
         python_callable=load_soil_to_snowflake
     )
 
-    predictions = PythonOperator(
-        task_id="load_predictions_to_snowflake",
-        python_callable=load_predictions_to_snowflake
-    )
-
-    weather >> soil >> predictions
+    [weather, soil]
