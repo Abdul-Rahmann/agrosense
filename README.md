@@ -7,7 +7,6 @@
 **Business Value**: 
 - Optimize crop yields through data-driven decisions
 - Reduce water usage with smart irrigation
-- Early detection of plant diseases/stress
 - Automated farm monitoring and alerts
 
 ## Dashboard Preview
@@ -23,28 +22,62 @@
 - ⚠️ Active alerts and anomaly detection
 - 📈 7-day trend visualizations with interactive charts
 - 💧 Irrigation recommendations based on soil conditions
-- 📊 Raw data access with CSV export capability
-- 🔄 Auto-refresh with 5-minute data caching
 
 **Tech Stack**: Streamlit + Plotly + Snowflake direct connection
 
 ## Architecture
 
-```
-APIs (Visual Crossing, Agromonitoring) 
-    ↓
-Airflow DAGs (Daily Extraction)
-    ↓
-PostgreSQL (Raw Data - agrosense schema)
-    ↓
-Snowflake (Analytics Warehouse)
-    ↓
-dbt Models (Staging → Intermediate → Marts)
-    ↓
-ML Training Dataset → MLflow (Tracking) → Model Registry → Predictions
-    ↓
-PostgreSQL (Predictions Table) → Streamlit Dashboard
-```
+                ┌──────────────────────────┐
+                │      External APIs       │
+                │  - Weather (VisualX)     │
+                │  - Soil (AgroMonitor)    │
+                └─────────────┬────────────┘
+                              │
+                              ▼
+                    ┌───────────────────┐
+                    │   Airflow DAGs    │
+                    │ (Daily Extraction)│
+                    └─────────┬─────────┘
+                              │
+                              ▼
+                   ┌──────────────────────┐
+                   │   PostgreSQL (Raw)   │
+                   │  weather + soil data │
+                   └───────────┬──────────┘
+                               │
+                               ▼
+                ┌────────────────────────────────┐
+                │        Snowflake Warehouse      │
+                │    (Analytics + Cleaned Data)   │
+                └──────────────────┬──────────────┘
+                                   │
+                                   ▼
+                            ┌──────────┐
+                            │   dbt    │
+                            │ Models   │
+                            │ Stg→Int→Marts
+                            └─────┬────┘
+                                  │
+                                  ▼
+                   ┌────────────────────────────────┐
+                   │   ML Pipeline (MLflow + RF)    │
+                   │  - Weekly training              │
+                   │  - Daily prediction             │
+                   └──────────────┬─────────────────┘
+                                  │
+                                  ▼
+                     ┌────────────────────┐
+                     │ PostgreSQL (Preds) │
+                     │ ML predictions tbl │
+                     └───────────┬────────┘
+                                 │
+                                 ▼
+                    ┌────────────────────────┐
+                    │ Streamlit Dashboard    │
+                    │  - Real-time sensors   │
+                    │  - Alerts              │
+                    │  - Yield predictions   │
+                    └────────────────────────┘
 
 ## Technology Stack
 
